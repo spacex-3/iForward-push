@@ -1422,7 +1422,7 @@ int ExecVoiceCommand(const char *cmd, int limit, int ver)
     {
         const unsigned char *address;
         char date[60]; int number;
-        int flags;
+        int flags __attribute__((unused));
         
         address = sqlite3_column_text(stmt, 1);
         number = sqlite3_column_int(stmt, 2);
@@ -1870,7 +1870,7 @@ static size_t read_callback(void *ptr, size_t size, size_t nmemb, void *userp)
   {
        data = (char*) malloc(strlen(text[pooh->counter]) * sizeof(char));
      assert(data != (char*) NULL);
-       sprintf(data, text[pooh->counter]);
+       sprintf(data, "%s", text[pooh->counter]);
   }
   else if (pooh->counter == 7)
   {
@@ -1983,7 +1983,8 @@ int main(int argc, char *argv[])
   version = 2;  
    fclose(callHistory4);
 
-   uid = [[UIDevice currentDevice] uniqueIdentifier];
+   // uniqueIdentifier is deprecated in iOS 5+, use identifierForVendor instead
+   uid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
    
   //NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
   //NSLOG(@"%@", [[NSUserDefaults standardUserDefaults] dictionaryRepresentation]);
@@ -2103,8 +2104,8 @@ int main(int argc, char *argv[])
         if (a > b)
         {
           //check if the to email is installed on the iphone
-          int is_allowed = CheckToEmail();
-        
+          int is_allowed __attribute__((unused)) = CheckToEmail();
+
           //printf("enabled=%d\n", enabled[i]);
 
           //first time running update the local counts
