@@ -18,9 +18,9 @@ iForward_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 iForward_FRAMEWORKS = UIKit Foundation AddressBook CoreGraphics CoreData CoreFoundation QuartzCore
 
 # Libraries
-# Bundle libcurl with the package and set rpath to find it at runtime
-# The curl library is included in cydia/iForward/usr/local/iForward/lib/
-iForward_LDFLAGS = -lsqlite3 -undefined dynamic_lookup -Wl,-rpath,/usr/local/iForward/lib
+# Depend on system curl package (will be installed via control file dependencies)
+# sqlite3 is provided by iOS system
+iForward_LDFLAGS = -lsqlite3 -undefined dynamic_lookup
 
 # Install path
 iForward_INSTALL_PATH = /usr/bin
@@ -32,11 +32,9 @@ internal-stage::
 	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences$(ECHO_END)
 	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/LaunchDaemons$(ECHO_END)
 	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/Application\ Support/iForward$(ECHO_END)
-	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/usr/local/iForward/lib$(ECHO_END)
 	$(ECHO_NOTHING)cp cydia/iForward/Library/PreferenceLoader/Preferences/iForward.plist $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences/$(ECHO_END)
 	$(ECHO_NOTHING)cp cydia/iForward/Library/PreferenceLoader/Preferences/iForwardIcon.png $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences/$(ECHO_END)
 	$(ECHO_NOTHING)cp cydia/iForward/Library/LaunchDaemons/com.iforward.plist $(THEOS_STAGING_DIR)/Library/LaunchDaemons/$(ECHO_END)
-	$(ECHO_NOTHING)cp cydia/iForward/usr/local/iForward/lib/*.dylib $(THEOS_STAGING_DIR)/usr/local/iForward/lib/$(ECHO_END)
 	$(ECHO_NOTHING)touch $(THEOS_STAGING_DIR)/Library/Application\ Support/iForward/iForward.db$(ECHO_END)
 
 # Actions to run after installation on device

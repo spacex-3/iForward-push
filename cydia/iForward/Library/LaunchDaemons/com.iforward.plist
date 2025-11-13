@@ -13,8 +13,8 @@
     <key>GroupName</key>
     <string>admin</string>
     
-    <key>Program</key> 
-    <string>/usr/bin/iForward</string>    
+    <key>Program</key>
+    <string>/usr/bin/iForward</string>
 
     <key>KeepAlive</key>
     <true/>
