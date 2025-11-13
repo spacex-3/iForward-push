@@ -29,6 +29,8 @@ jobs:
         echo "THEOS=$HOME/theos" >> $GITHUB_ENV
         # Create lib directory for iOS libraries
         mkdir -p $HOME/theos/lib
+        # Copy libcurl.tbd stub for linking
+        cp libcurl.tbd $HOME/theos/lib/
 
     - name: Download iOS SDKs
       run: |

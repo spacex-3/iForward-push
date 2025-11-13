@@ -1,0 +1,11 @@
+--- !tapi-tbd-v3
+archs:           [ arm64, arm64e ]
+platform:        ios
+install-name:    /usr/lib/libcurl.dylib
+current-version: 4.0.0
+exports:
+  - archs:           [ arm64, arm64e ]
+    symbols:         [ _curl_easy_cleanup, _curl_easy_init, _curl_easy_perform,
+                       _curl_easy_setopt, _curl_easy_strerror, _curl_global_init,
+                       _curl_slist_append, _curl_slist_free_all, _curl_global_cleanup,
+                       _curl_version_info ]

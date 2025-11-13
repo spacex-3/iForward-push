@@ -18,9 +18,9 @@ iForward_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 iForward_FRAMEWORKS = UIKit Foundation AddressBook CoreGraphics CoreData CoreFoundation QuartzCore
 
 # Libraries
-# Depend on system curl package (will be installed via control file dependencies)
-# sqlite3 is provided by iOS system
-iForward_LDFLAGS = -lsqlite3 -undefined dynamic_lookup
+# Use libcurl.tbd stub for compile-time linking (placed in $THEOS/lib/)
+# At runtime, will load /usr/lib/libcurl.dylib from system curl package
+iForward_LDFLAGS = -lsqlite3 -lcurl
 
 # Install path
 iForward_INSTALL_PATH = /usr/bin
