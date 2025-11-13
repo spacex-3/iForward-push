@@ -28,8 +28,18 @@ iForward_INSTALL_PATH = /usr/bin
 
 include $(THEOS)/makefiles/tool.mk
 
-# Copy plist files and other resources after building
+# Copy additional files from cydia directory structure to deb package
+internal-stage::
+	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences$(ECHO_END)
+	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/LaunchDaemons$(ECHO_END)
+	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/Application\ Support/iForward$(ECHO_END)
+	$(ECHO_NOTHING)cp cydia/iForward/Library/PreferenceLoader/Preferences/iForward.plist $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences/$(ECHO_END)
+	$(ECHO_NOTHING)cp cydia/iForward/Library/PreferenceLoader/Preferences/iForwardIcon.png $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences/$(ECHO_END)
+	$(ECHO_NOTHING)cp cydia/iForward/Library/LaunchDaemons/com.iforward.plist $(THEOS_STAGING_DIR)/Library/LaunchDaemons/$(ECHO_END)
+	$(ECHO_NOTHING)touch $(THEOS_STAGING_DIR)/Library/Application\ Support/iForward/iForward.db$(ECHO_END)
+
+# Actions to run after installation on device
 after-install::
 	install.exec "mkdir -p /Library/Application\ Support/iForward"
-	install.exec "touch /Library/Application\ Support/iForward/iForward.db"
+	install.exec "chmod 644 /Library/LaunchDaemons/com.iforward.plist"
 	install.exec "launchctl load /Library/LaunchDaemons/com.iforward.plist"
