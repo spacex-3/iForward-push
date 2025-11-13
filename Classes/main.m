@@ -35,7 +35,7 @@ struct WriteThis {
 //#define DB_CALL6 "/private/var/wireless/Library/CallHistory/call_history.db"
 #define DB_SMS "/private/var/mobile/Library/SMS/sms.db"
 #define DB_VOICE "/private/var/mobile/Library/Voicemail/voicemail.db"
-#define DB_LOCAL "/Library/Application\ Support/iForward/iForward.db"
+#define DB_LOCAL "/Library/Application Support/iForward/iForward.db"
 #define DB_AB "/var/mobile/Library/AddressBook/AddressBook.sqlitedb"
 
 char host_port[70];
@@ -395,12 +395,12 @@ char* GetRecipients(char* recp)
         [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br>"]];
 
         /*
-        FILE* plist = fopen( "/Library/Application\ Support/iForward/tmp_buff.txt", "w" );
+        FILE* plist = fopen( "/Library/Application Support/iForward/tmp_buff.txt", "w" );
         fprintf(plist,recp);
         fclose(plist);
 
         // Build the array from the plist
-        NSMutableArray *array2 = [[NSMutableArray alloc] initWithContentsOfFile:@"/Library/Application\ Support/iForward/tmp_buff.txt"];
+        NSMutableArray *array2 = [[NSMutableArray alloc] initWithContentsOfFile:@"/Library/Application Support/iForward/tmp_buff.txt"];
 
         NSMutableString *nsData = [[NSMutableString alloc] initWithString:@""];
 
@@ -941,7 +941,7 @@ int ExecIMessageCommand(int limit)
     
     if (s == SQLITE_ROW) 
     {
-        int is_madrid = sqlite3_column_int(stmt, 5);
+        int is_madrid __attribute__((unused)) = sqlite3_column_int(stmt, 5);
         //if (is_madrid == 0)
           // continue;       
         char *text;
@@ -1037,7 +1037,7 @@ int ExecIMessageCommand(int limit)
         
         //char cname[100];
         //strcpy(cname,GetContactName(address));
-        NSMutableString *cname = GetContactName(address);
+        NSMutableString *cname = GetContactName((const char *)address);
         
         if (mms)
         {
@@ -1108,7 +1108,7 @@ int ExecSMSCommand(const char *cmd, int limit)
         //char *textSMS;
         char date[60]; int number;
         int flags;
-        int rowid = sqlite3_column_int(stmt, 1);
+        int rowid __attribute__((unused)) = sqlite3_column_int(stmt, 1);
     
         //check if it is an IMessage
         //int is_madrid = sqlite3_column_int(stmt, 6); 
@@ -1202,7 +1202,7 @@ int ExecSMSCommand(const char *cmd, int limit)
           
         //char cname[100];
         //strcpy(cname,GetContactName(address));
-        NSMutableString *cname = GetContactName(address);
+        NSMutableString *cname = GetContactName((const char *)address);
         NSLOG(@"cname.....");
         if (mms)
         {
@@ -1244,7 +1244,7 @@ int ExecSMSCommand6(const char *cmd, int limit)
   int rc __attribute__((unused));
   rc = sqlite3_open(DB_SMS, &db);
   sqlite3_prepare_v2(db, cmd, strlen(cmd) + 1, & stmt, NULL);
-  int usingIMessage = 0;
+  int usingIMessage __attribute__((unused)) = 0;
   int mms = 0;
   int times = 0;
   
@@ -1265,7 +1265,7 @@ int ExecSMSCommand6(const char *cmd, int limit)
     
         char *text;
         char date[60]; int number;
-        int flags;
+        int flags __attribute__((unused));
         char* roomid = (char*) sqlite3_column_text(stmt, 5);
     
         //check if it is an IMessage
@@ -1479,9 +1479,9 @@ int ExecCountCommand(const char *cmd, int local)
   //char * sql;
   sqlite3_stmt * stmt;
   int rc __attribute__((unused));
-  char * errmsg;
-  int row = 0;
-  int number = -1;
+  char * errmsg __attribute__((unused));
+  int row __attribute__((unused)) = 0;
+  int number __attribute__((unused)) = -1;
   if (local) dbname = DB_LOCAL;
   else if (current_message == CALL)
   {
@@ -1546,9 +1546,9 @@ int ExecUpdateCommand(const char *update, int new_count, int old_count)
   //char * sql;
   sqlite3_stmt * stmt;
   int rc __attribute__((unused));
-  char * errmsg;
-  int row = 0;
-  int number = -1;
+  char * errmsg __attribute__((unused));
+  int row __attribute__((unused)) = 0;
+  int number __attribute__((unused)) = -1;
   rc = sqlite3_open(DB_LOCAL, &db);
   sqlite3_prepare_v2(db, update_sql, strlen(update_sql) + 1, & stmt, NULL);
   while (1)
@@ -1610,7 +1610,7 @@ void LoadPlistValues(const char* filename, char to[], char from[], char h[], cha
 
         NSMutableDictionary* defaults = [[NSMutableDictionary alloc] initWithContentsOfFile: filePath];
 
-        NSString *value = [[[NSString alloc] init] autorelease];
+        NSString *value = [[NSString alloc] init];
 
         NSNumber *inter;
 
@@ -1741,7 +1741,7 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, voi
  
   mem->memory = realloc(mem->memory, mem->size + realsize + 1);
   if (mem->memory == NULL) {
-    NSLOG("not enough memory (realloc returned NULL)\n");
+    NSLOG(@"not enough memory (realloc returned NULL)\n");
     exit(EXIT_FAILURE);
   }
  
@@ -1965,9 +1965,9 @@ int main(int argc, char *argv[])
   {
     debugOn=1;
   }
- 
-   NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
-  
+
+   @autoreleasepool {
+
    inEnabled[0] = 0;
    inEnabled[1] = 0;
    inEnabled[2] = 0;
@@ -2228,6 +2228,6 @@ int main(int argc, char *argv[])
     ExecUpdateCommand(updates[i], a, b);
                 
   }//end for loop
-  [pool release]; 
+  }//end autoreleasepool
   return 0;
 }
