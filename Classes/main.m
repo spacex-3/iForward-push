@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <curl/curl.h>
+#include "curl/curl.h"
 #include <time.h>
 #include <unistd.h>
 #include <sqlite3.h>
@@ -74,7 +74,7 @@ struct mmsFile *mmsFilesHead = NULL;
 
 NSMutableString *MMSBuffer = nil;
 NSString *uid = nil;
-NSComparisonResult Gorder = nil;
+NSComparisonResult Gorder;
 int sqlType = 0;
 
 #define CALL 0
@@ -86,7 +86,7 @@ int sqlType = 0;
   CFOptionFlags responseFlags = 0; \
   CFStringRef iError; \
   if (a != 0) iError = CFStringCreateWithFormat(NULL, NULL, CFSTR("%s Error Code: %d"), x, a); \
-  else iError = CFSTR(x); \  
+  else iError = CFSTR(x); \
   CFUserNotificationDisplayAlert(20.0, 3, NULL, NULL, NULL, CFSTR("iForward Error"), iError, CFSTR("OK"), NULL, NULL, &responseFlags); \
 } \
 
@@ -183,7 +183,7 @@ NSMutableString * GetContactName(const char *number)
     
           
     CFIndex nPeople = CFArrayGetCount(allPeople);
-    NSLOG(@"count=%d,number=%s", nPeople, number);
+    NSLOG(@"count=%ld,number=%s", (long)nPeople, number);
     if (nPeople > 5000)  { NSLOG(@">5000"); return name; }
     
     for (int i=0;i < nPeople;i++) { 
@@ -193,8 +193,9 @@ NSMutableString * GetContactName(const char *number)
 
       for (CFIndex i = 0; i < ABMultiValueGetCount(multi); i++)
       {
-          NSString *phoneNumberLabel = (NSString*) ABMultiValueCopyLabelAtIndex(multi, i);
-          NSString *phoneNumber      = (NSString*) ABMultiValueCopyValueAtIndex(multi, i);
+          NSString *phoneNumberLabel = (__bridge_transfer NSString*) ABMultiValueCopyLabelAtIndex(multi, i);
+          NSString *phoneNumber      = (__bridge_transfer NSString*) ABMultiValueCopyValueAtIndex(multi, i);
+          (void)phoneNumberLabel; // Mark as used
           const char* num = [phoneNumber UTF8String];
           NSLOG(@"number=%s", num);
 
@@ -231,14 +232,14 @@ NSMutableString * GetContactName(const char *number)
               //printf("adding a 1 to all numeric1");
               sprintf(contact_num, "1%s", all_numeric1);
             }
-            else sprintf(contact_num, all_numeric1);
-            
+            else sprintf(contact_num, "%s", all_numeric1);
+
             if (all_numeric1[0] == '1' && all_numeric2[0] != '1')
             {
               //printf("adding a 1 to all numeric2");
               sprintf(the_num, "1%s", all_numeric2);
             }
-            else sprintf(the_num, all_numeric2);
+            else sprintf(the_num, "%s", all_numeric2);
           }            
           
             
@@ -336,14 +337,14 @@ NSMutableString* GetContactName6(const char *number)
               //printf("adding a 1 to all numeric1");
               sprintf(contact_num, "1%s", all_numeric1);
             }
-            else sprintf(contact_num, all_numeric1);
-            
+            else sprintf(contact_num, "%s", all_numeric1);
+
             if (all_numeric1[0] == '1' && all_numeric2[0] != '1')
             {
               //printf("adding a 1 to all numeric2");
               sprintf(the_num, "1%s", all_numeric2);
             }
-            else sprintf(the_num, all_numeric2);
+            else sprintf(the_num, "%s", all_numeric2);
           }            
           
             
@@ -390,22 +391,22 @@ NSMutableString* GetContactName6(const char *number)
 char* GetRecipients(char* recp)
 {
         NSMutableString *nsData = [[NSMutableString alloc] initWithUTF8String:recp];
-        [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br\>"]];
-        [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br\>"]];
-          
+        [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br>"]];
+        [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br>"]];
+
         /*
         FILE* plist = fopen( "/Library/Application\ Support/iForward/tmp_buff.txt", "w" );
         fprintf(plist,recp);
         fclose(plist);
-         
-        // Build the array from the plist  
+
+        // Build the array from the plist
         NSMutableArray *array2 = [[NSMutableArray alloc] initWithContentsOfFile:@"/Library/Application\ Support/iForward/tmp_buff.txt"];
-         
+
         NSMutableString *nsData = [[NSMutableString alloc] initWithString:@""];
-          
+
         NSUInteger count = [array2 count];
         for (NSUInteger i = 0; i < count; i++) {
-          
+
           NSString *str = [array2 objectAtIndex: i];
           if (i<count-1)
             [nsData appendFormat: @"%s,", str];
@@ -413,8 +414,8 @@ char* GetRecipients(char* recp)
             [nsData appendFormat: @"%s", str];
         }
         */
-        
-        return [nsData UTF8String];
+
+        return (char *)[nsData UTF8String];
 }
 
 
@@ -426,7 +427,7 @@ int ExecCallCommand(const char *cmd, int limit, int ver)
   sqlite3 * db;
   //char * sql;
   sqlite3_stmt * stmt;
-  int rc;
+  int rc __attribute__((unused));
   if (sqlType == 1)
     rc = sqlite3_open(DB_CALL8, &db);
   else if (version == 4)
@@ -522,7 +523,7 @@ int ExecCallCommand(const char *cmd, int limit, int ver)
           sprintf(t, "0 sec");
         
     [content appendFormat: @"<h3>New Call at %s</h3> %s %@ (%s)  duration %s<br/>", start_date, from_to,
-          cname, address, t];
+          cname, (const char *)address, t];
 
     }
     else if (s == SQLITE_DONE)
@@ -666,8 +667,8 @@ void AppendMMSBuffer(int rowid, int limit)
       NSMutableString *nsData = [[NSMutableString alloc] initWithUTF8String: text];
       [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"<" withString:@"&lt;"]];
       [nsData setString: [nsData stringByReplacingOccurrencesOfString:@">" withString:@"&gt;"]];
-      [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br\>"]];
-      [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br\>"]]; 
+      [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br>"]];
+      [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br>"]]; 
       
       [MMSBuffer appendFormat: @"%@<br/>", nsData];
       }
@@ -805,8 +806,8 @@ void AppendMMSBuffer6(int rowid, int limit)
     
       [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"<" withString:@"&lt;"]];
       [nsData setString: [nsData stringByReplacingOccurrencesOfString:@">" withString:@"&gt;"]];
-      [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br\>"]];
-      [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br\>"]]; 
+      [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br>"]];
+      [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br>"]]; 
       
       [MMSBuffer appendFormat: @"%@<br/>", nsData];
       }
@@ -963,8 +964,8 @@ int ExecIMessageCommand(int limit)
         if (text && strlen(text) > 0)
         { 
           nsData = [[NSMutableString alloc] initWithUTF8String:text];
-          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br\>"]];
-          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br\>"]];
+          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br>"]];
+          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br>"]];
         }
         else
           nsData = [[NSMutableString alloc] initWithString:@""];
@@ -1136,8 +1137,8 @@ int ExecSMSCommand(const char *cmd, int limit)
         if (text && strlen(text) > 0)
         { 
           nsData = [[NSMutableString alloc] initWithUTF8String:text];
-          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br\>"]];
-          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br\>"]];
+          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br>"]];
+          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br>"]];
         }
         else
             nsData = [[NSMutableString alloc] initWithString:@""];
@@ -1291,8 +1292,8 @@ int ExecSMSCommand6(const char *cmd, int limit)
         if (text && strlen(text) > 0)
         { 
           nsData = [[NSMutableString alloc] initWithUTF8String:text];
-          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br\>"]];
-          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br\>"]];
+          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\n" withString:@"<br>"]];
+          [nsData setString: [nsData stringByReplacingOccurrencesOfString:@"\r" withString:@"<br>"]];
         }
         else
             nsData = [[NSMutableString alloc] initWithString:@""];
