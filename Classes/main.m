@@ -249,11 +249,11 @@ NSMutableString * GetContactName(const char *number)
           {
             NSLOG(@"matched");
 
-            NSString *contactFirst = (NSString*) ABRecordCopyValue(ref, kABPersonFirstNameProperty);
+            NSString *contactFirst = (__bridge_transfer NSString*) ABRecordCopyValue(ref, kABPersonFirstNameProperty);
               if (contactFirst != nil && [contactFirst length] > 0)
                 [name appendFormat: @"%@", contactFirst];
 
-              NSString *contactLast = (NSString*) ABRecordCopyValue(ref, kABPersonLastNameProperty);
+              NSString *contactLast = (__bridge_transfer NSString*) ABRecordCopyValue(ref, kABPersonLastNameProperty);
               if (contactLast != nil && [contactLast length] > 0)
                 [name appendFormat: @" %@", contactLast];
                 
@@ -284,12 +284,12 @@ NSMutableString* GetContactName6(const char *number)
   NSMutableString *name = [[NSMutableString alloc] initWithString:@""];
   if (number == (char*) NULL || strlen(number) == 0)
    return name;
-   
+
   const char* cmd = "select a.First, a.Last, v.Value from ABPerson as a, ABMultiValue as v where v.record_id = a.rowid;";
-  
+
   sqlite3 * db;
   sqlite3_stmt * stmt;
-  int rc;  
+  int rc __attribute__((unused));  
   rc = sqlite3_open(DB_AB, &db);
   sqlite3_prepare_v2(db, cmd, strlen(cmd) + 1, & stmt, NULL);
   
@@ -505,9 +505,9 @@ int ExecCallCommand(const char *cmd, int limit, int ver)
         //char cname[100];
         //strcpy(cname, GetContactName(address));
         NSMutableString *cname = nil;
-    if (ver == 1) cname = GetContactName6(address);
-    else cname = GetContactName(address);
-    
+    if (ver == 1) cname = GetContactName6((const char *)address);
+    else cname = GetContactName((const char *)address);
+
         //NSLOG(@"cname=%@", cname);
         int dur = 0;
         dur = sqlite3_column_int(stmt, 3);
@@ -551,13 +551,12 @@ char* GetMMSFilePath(char* fname)
   NSDirectoryEnumerator *dirEnum =
       [localFileManager enumeratorAtPath:docsDir];
   NSString *file;
-  while (file = [dirEnum nextObject]) {
+  while ((file = [dirEnum nextObject])) {
       //NSLOG(@"looking at file =%@", file);
       if (strstr([file UTF8String], fname) != NULL) {
-          return [file UTF8String];
+          return (char *)[file UTF8String];
       }
   }
-  [localFileManager release];
   return NULL;
   
 }
@@ -586,9 +585,9 @@ int CheckToEmail()
             }
           }
       }
-      [localFileManager release];
+      return 1;
     }
-    
+
     NSString *filePath = [[NSString alloc] initWithUTF8String:"/private/var/mobile/Library/Mail/metadata.plist"];
     NSMutableDictionary* metadata = [[NSMutableDictionary alloc] initWithContentsOfFile: filePath];
     NSMutableDictionary* fetchingdata = [metadata objectForKey:@"FetchingData"];
@@ -614,7 +613,7 @@ int CheckToEmail()
     NSDirectoryEnumerator *dirEnum =
         [localFileManager enumeratorAtPath:docsDir];
     NSString *file;
-    while (file = [dirEnum nextObject]) {
+    while ((file = [dirEnum nextObject])) {
         if (strstr([file UTF8String], "-") != NULL) {
           NSRange r = [file rangeOfString: fe options:NSCaseInsensitiveSearch];
           if (r.location != NSNotFound) {
@@ -623,7 +622,6 @@ int CheckToEmail()
           }
         }
     }
-    [localFileManager release];
 
     return 0;
 }
@@ -639,11 +637,11 @@ void AppendMMSBuffer(int rowid, int limit)
   sqlite3 * db;
   //char * sql;
   sqlite3_stmt * stmt;
-  int rc;
+  int rc __attribute__((unused));
     
   rc = sqlite3_open(DB_SMS, &db);
   sqlite3_prepare_v2(db, cmd, strlen(cmd) + 1, & stmt, NULL);
-  int row_count = 0;
+  int row_count __attribute__((unused)) = 0;
   while (1)
   {  
     int s;
@@ -706,7 +704,7 @@ void AppendMMSBuffer6(int rowid, int limit)
     
   sqlite3 * db;
   sqlite3_stmt * stmt;
-  int rc;  
+  int rc __attribute__((unused));
   rc = sqlite3_open(DB_SMS, &db);
   sqlite3_prepare_v2(db, cmd, strlen(cmd) + 1, & stmt, NULL);
   
@@ -734,23 +732,26 @@ void AppendMMSBuffer6(int rowid, int limit)
     {
       char *mime_type = (char*) sqlite3_column_text(stmt, 1);
       NSLOG(@"mime_type=%s,text=%s",mime_type,text);
-      char *file = strtok(text, "/");
+      char textCopy[300];
+      strncpy(textCopy, (const char *)text, sizeof(textCopy)-1);
+      textCopy[sizeof(textCopy)-1] = '\0';
+      char *file = strtok(textCopy, "/");
       char fname[100];
       char fpath[300];
-      
+
       assert(fname != NULL);
       do
       {
         strcpy(fname,file);
       } while((file = strtok(NULL, "/")) != NULL);//get last token
-      
-      NSLOG(@"file=%s,size=%d,length",fname,[nsData length]);
-      
+
+      NSLOG(@"file=%s,size=%lu,length",fname,(unsigned long)[nsData length]);
+
       assert(fpath != NULL);
-      
+
       strncpy(fpath, [nsData UTF8String]+1, [nsData length]-1);
       fpath[[nsData length]-1] = '\0';
-        NSLOG(@"fpath=%s,length=%d,fname=%d",fpath,[nsData length],strlen(fname));
+        NSLOG(@"fpath=%s,length=%lu,fname=%lu",fpath,(unsigned long)[nsData length],(unsigned long)strlen(fname));
       
       
       if (mmsFilesHead == NULL)
@@ -847,9 +848,9 @@ NSString* GetiOS6ChatAddresses(char* chatid)
     sqlite3 * db;
     //char * sql;
     sqlite3_stmt * stmt;
-    int rc;
-    int row_count = 0;
-  
+    int rc __attribute__((unused));
+    int row_count __attribute__((unused)) = 0;
+
   rc = sqlite3_open(DB_SMS, &db);
     sqlite3_prepare_v2(db, cmd, strlen(cmd) + 1, & stmt, NULL);
     while (1)
@@ -921,11 +922,11 @@ int ExecIMessageCommand(int limit)
   sqlite3 * db;
   //char * sql;
   sqlite3_stmt * stmt;
-  int rc;
+  int rc __attribute__((unused));
     
   rc = sqlite3_open(DB_SMS, &db);
   sqlite3_prepare_v2(db, cmd, strlen(cmd) + 1, & stmt, NULL);
-  int row_count = 0;
+  int row_count __attribute__((unused)) = 0;
   while (1)
   {
       
@@ -1079,7 +1080,7 @@ int ExecSMSCommand(const char *cmd, int limit)
   sqlite3 * db;
   //char * sql;
   sqlite3_stmt * stmt;
-  int rc;
+  int rc __attribute__((unused));
   //return 0;
   //printf("query=%s", cmd);
   rc = sqlite3_open(DB_SMS, &db);
@@ -1240,7 +1241,7 @@ int ExecSMSCommand6(const char *cmd, int limit)
   sqlite3 * db;
   //char * sql;
   sqlite3_stmt * stmt;
-  int rc;
+  int rc __attribute__((unused));
   rc = sqlite3_open(DB_SMS, &db);
   sqlite3_prepare_v2(db, cmd, strlen(cmd) + 1, & stmt, NULL);
   int usingIMessage = 0;
@@ -1401,7 +1402,7 @@ int ExecVoiceCommand(const char *cmd, int limit, int ver)
   sqlite3 * db;
   //char * sql;
   sqlite3_stmt * stmt;
-  int rc;
+  int rc __attribute__((unused));
   rc = sqlite3_open(DB_VOICE, &db);
   int times = 0;
   sqlite3_prepare_v2(db, cmd, strlen(cmd) + 1, & stmt, NULL);
@@ -1440,19 +1441,19 @@ int ExecVoiceCommand(const char *cmd, int limit, int ver)
         flags = sqlite3_column_int(stmt, 3); 
         //char cname[100];
         //strcpy(cname, GetContactName(address));
-    
+
         NSMutableString *cname = nil;
-    if (ver == 1) cname = GetContactName6(address);
-    else cname = GetContactName(address);
-    
+    if (ver == 1) cname = GetContactName6((const char *)address);
+    else cname = GetContactName((const char *)address);
+
         if (attachVoicemail)
     {
-      [content appendFormat: @"<h3>New Voicemail at %s</h3> from %@ (%s) %d.amr<br/>",date, cname, address,
+      [content appendFormat: @"<h3>New Voicemail at %s</h3> from %@ (%s) %d.amr<br/>",date, cname, (const char *)address,
             lastVoicemail-times];
         }
     else
     {
-      [content appendFormat: @"<h3>New Voicemail at %s</h3> from %@ (%s)<br/>",date, cname, address];
+      [content appendFormat: @"<h3>New Voicemail at %s</h3> from %@ (%s)<br/>",date, cname, (const char *)address];
     }
     }
     else if (s == SQLITE_DONE)
@@ -1477,7 +1478,7 @@ int ExecCountCommand(const char *cmd, int local)
   sqlite3 * db;
   //char * sql;
   sqlite3_stmt * stmt;
-  int rc;
+  int rc __attribute__((unused));
   char * errmsg;
   int row = 0;
   int number = -1;
@@ -1544,7 +1545,7 @@ int ExecUpdateCommand(const char *update, int new_count, int old_count)
   sqlite3 * db;
   //char * sql;
   sqlite3_stmt * stmt;
-  int rc;
+  int rc __attribute__((unused));
   char * errmsg;
   int row = 0;
   int number = -1;
@@ -1580,7 +1581,7 @@ int ExecUpdateVerCommand(const char *update, char *ver)
   sprintf(update_sql, update, ver);
   sqlite3 * db;
   sqlite3_stmt * stmt;
-  int rc;
+  int rc __attribute__((unused));
   rc = sqlite3_open(DB_LOCAL, &db);
   sqlite3_prepare_v2(db, update_sql, strlen(update_sql) + 1, & stmt, NULL);
   while (1)
