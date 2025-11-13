@@ -20,7 +20,8 @@ iForward_FRAMEWORKS = UIKit Foundation AddressBook CoreGraphics CoreData CoreFou
 # Libraries
 # On iOS, curl is usually provided by the system or jailbreak environment
 # We use -undefined dynamic_lookup to allow linking without the library present
-iForward_LDFLAGS = -lsqlite3 -undefined dynamic_lookup -lcurl
+# Do NOT specify -lcurl here - symbols will be resolved at runtime on device
+iForward_LDFLAGS = -lsqlite3 -undefined dynamic_lookup
 
 # Install path
 iForward_INSTALL_PATH = /usr/bin
