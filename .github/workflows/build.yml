@@ -1,0 +1,94 @@
+name: Build iForward-PushPlus
+
+on:
+  push:
+    branches: [ master, main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install Dependencies
+      run: |
+        brew install ldid xz make
+
+    - name: Setup Theos
+      run: |
+        git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+
+    - name: Download iOS SDKs
+      run: |
+        curl -LO https://github.com/theos/sdks/archive/master.zip
+        unzip -q master.zip
+        mv sdks-master/*.sdk $HOME/theos/sdks/
+        ls -la $HOME/theos/sdks/
+
+    - name: Build Package
+      run: |
+        export THEOS=$HOME/theos
+        export PATH=$THEOS/bin:$PATH
+        make clean || true
+        make package FINALPACKAGE=1
+      env:
+        THEOS: ${{ env.THEOS }}
+
+    - name: Get Package Info
+      id: package_info
+      run: |
+        PACKAGE_NAME=$(ls packages/*.deb | head -n 1 | xargs basename)
+        PACKAGE_VERSION=$(grep "^Version:" control | cut -d' ' -f2)
+        echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+        echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+        echo "Built package: $PACKAGE_NAME (v$PACKAGE_VERSION)"
+
+    - name: Upload DEB Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: iForward-PushPlus-${{ steps.package_info.outputs.package_version }}
+        path: packages/*.deb
+        if-no-files-found: error
+
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: packages/*.deb
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build Summary
+      run: |
+        echo "## 📦 Build Successful!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Package Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Name:** ${{ steps.package_info.outputs.package_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version:** ${{ steps.package_info.outputs.package_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Download" >> $GITHUB_STEP_SUMMARY
+        echo "The DEB package is available in the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Installation" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "# Transfer to your device" >> $GITHUB_STEP_SUMMARY
+        echo "scp ${{ steps.package_info.outputs.package_name }} root@your-device-ip:/tmp/" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Install on device" >> $GITHUB_STEP_SUMMARY
+        echo "ssh root@your-device-ip" >> $GITHUB_STEP_SUMMARY
+        echo "dpkg -i /tmp/${{ steps.package_info.outputs.package_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

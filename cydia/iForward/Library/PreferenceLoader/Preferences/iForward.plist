@@ -93,9 +93,37 @@
           <key>defaults</key>
           <string>com.iforward</string>
           <key>key</key>
+          <string>pushplusToken</string>
+          <key>label</key>
+          <string>PushPlus Token</string>
+          <key>placeholder</key>
+          <string>Enter your PushPlus token</string>
+         </dict>
+         <dict>
+          <key>cell</key>
+          <string>PSEditTextCell</string>
+          <key>detail</key>
+          <string>PSDetailController</string>
+          <key>defaults</key>
+          <string>com.iforward</string>
+          <key>key</key>
+          <string>pushplusUrl</string>
+          <key>label</key>
+          <string>PushPlus URL (Optional)</string>
+          <key>placeholder</key>
+          <string>https://www.pushplus.plus/send</string>
+         </dict>
+         <dict>
+          <key>cell</key>
+          <string>PSEditTextCell</string>
+          <key>detail</key>
+          <string>PSDetailController</string>
+          <key>defaults</key>
+          <string>com.iforward</string>
+          <key>key</key>
           <string>toEmail</string>
           <key>label</key>
-          <string>To Email</string>
+          <string>To Email (Legacy)</string>
          </dict>
          <dict>
           <key>cell</key>

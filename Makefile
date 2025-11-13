@@ -1,98 +1,32 @@
-XCODE_BASE=/Applications/Xcode.app/Contents
-#SIMULATOR_BASE=$(XCODE_BASE)/Developer/Platforms/iPhoneSimulator.platform
-SIMULATOR_BASE=$(XCODE_BASE)/Developer/Platforms/iPhoneOS.platform
-FRAMEWORKS=$(SIMULATOR_BASE)/Developer/SDKs/iPhoneOS6.1.sdk/System/Library/Frameworks/
-INCLUDES=$(SIMULATOR_BASE)/Developer/SDKs/iPhoneOS6.1.sdk/usr/include
+export THEOS_DEVICE_IP=localhost
+export THEOS_DEVICE_PORT=2222
 
-IPHONE_IP:=
-PROJECTNAME:=iForward
-APPFOLDER:=$(PROJECTNAME).app
-INSTALLFOLDER:=$(PROJECTNAME).app
+# Target iOS 14.0+ with arm64 and arm64e support
+ARCHS = arm64 arm64e
+TARGET = iphone:clang:14.5:14.0
 
-CC:=clang
-CPP:=clang++
+include $(THEOS)/makefiles/common.mk
 
-#CFLAGS += -objc-arc
-#CFLAGS += -fblocks
-#CFLAGS += -g0 -O2
-CFLAGS += -I"$(SRCDIR)"
+# Define as a command-line tool
+TOOL_NAME = iForward
 
-#CPPFLAGS += -objc-arc
-#CPPFLAGS += -fblocks
-#CPPFLAGS += -g0 -O2
-CPPLAGS += -I"$(SRCDIR)"
+# Source files
+iForward_FILES = Classes/main.m
+iForward_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 
-CFLAGS += -F"$(SIMULATOR_BASE)/Developer/SDKs/iPhoneOS6.1.sdk/System/Library/PrivateFrameworks/" 
+# Frameworks
+iForward_FRAMEWORKS = UIKit Foundation AddressBook CoreGraphics CoreData CoreFoundation QuartzCore
 
-CFLAGS += -arch armv7s
-#CFLAGS += -arch x86_64
-CFLAGS += -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS6.1.sdk
-LDFLAGS += -framework Foundation 
-LDFLAGS += -framework UIKit 
-LDFLAGS += -framework CoreGraphics
-LDFLAGS += -framework AddressBook
-LDFLAGS += -framework CoreData
-LDFLAGS += -framework CoreFoundation
-LDFLAGS += -framework QuartzCore
-LDFLAGS += -framework GraphicsServices
-LDFLAGS += -L"/usr/local/iForward/lib"
-LDFLAGS += -lcurl
-#LDFLAGS += -L"/usr/lib" -lssl -lcrypto
+# Libraries
+iForward_LIBRARIES = curl sqlite3
 
-SRCDIR=Classes
-OBJS+=$(patsubst %.m,%.o,$(wildcard $(SRCDIR)/*.m))
-OBJS+=$(patsubst %.c,%.o,$(wildcard $(SRCDIR)/*.c))
-OBJS+=$(patsubst %.cpp,%.o,$(wildcard $(SRCDIR)/*.cpp))
+# Install path
+iForward_INSTALL_PATH = /usr/bin
 
-INFOPLIST:=$(wildcard *Info.plist)
+include $(THEOS)/makefiles/tool.mk
 
-RESOURCES+=$(wildcard ./Images/*)
-RESOURCES+=$(wildcard ./Resources/*)
-RESOURCES+=$(wildcard ./Localizations/*)
-
-
-all:	$(PROJECTNAME)
-
-$(PROJECTNAME):	$(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(filter %.o,$^) -o $@ 
-
-%.o:	%.m
-	$(CC) -c $(CFLAGS) $< -o $@
-
-%.o:	%.c
-	$(CC) -c $(CFLAGS) $< -o $@
-
-%.o:	%.cpp
-	$(CPP) -c $(CPPFLAGS) $< -o $@
-
-
-dist:	$(PROJECTNAME)
-	cp iForward cydia/iForward/usr/bin/iForward
-	dpkg-deb -b cydia/iForward
-
-langs:
-	ios-genLocalization
-
-install: dist
-ifeq ($(IPHONE_IP),)
-	echo "Please set IPHONE_IP"
-else
-	ssh root@$(IPHONE_IP) 'dpkg -r iForward'
-	scp cydia/iForward.deb root@$(IPHONE_IP):iForward.deb
-	ssh root@$(IPHONE_IP) 'dpkg -i iForward'
-	echo "Application installed"
-endif
-
-uninstall:
-ifeq ($(IPHONE_IP),)
-	echo "Please set IPHONE_IP"
-else
-	ssh root@$(IPHONE_IP) 'dpkg -r iForward'
-	echo "Application uninstalled"
-endif
-clean:
-	find . -name \*.o|xargs rm -rf
-	rm -rf $(APPFOLDER)
-	rm -f $(PROJECTNAME)
-
-.PHONY: all dist install uninstall clean
+# Copy plist files and other resources after building
+after-install::
+	install.exec "mkdir -p /Library/Application\ Support/iForward"
+	install.exec "touch /Library/Application\ Support/iForward/iForward.db"
+	install.exec "launchctl load /Library/LaunchDaemons/com.iforward.plist"

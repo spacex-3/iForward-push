@@ -1,0 +1,96 @@
+# Theos build files
+.theos/
+obj/
+packages/
+.debmake/
+*.deb
+
+# Compiled Object files
+*.o
+*.obj
+
+# Backup files
+*.bak
+*.old
+*~
+Makefile.old
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Thumbnails
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.project
+.cproject
+.settings/
+
+# Xcode
+xcuserdata/
+*.xcworkspace
+!default.xcworkspace
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+DerivedData/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+!sdks*.zip
+
+# Local configuration
+local.mk
+.env
+
+# Documentation build
+docs/_build/
+site/
+
+# Test files
+test_results/
+coverage/

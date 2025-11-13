@@ -47,6 +47,8 @@ char fromEmail[60];
 char inSubjects[3][60];
 char outSubjects[3][60];
 char subject[60];
+char pushplus_token[100];
+char pushplus_url[200];
 NSMutableString *content = nil;
 int isSMS = 0;
 int isCall = 0;
@@ -1334,24 +1336,41 @@ int ExecSMSCommand6(const char *cmd, int limit)
           isIncoming = 1;
         }
         NSLOG(@"is_from_me=%d,from_to=%s",is_from_me, from_to);
-    
+
         NSMutableString *cname = GetContactName6(address);
+
+        // 获取账户和服务信息
+        char *account = (char*) sqlite3_column_text(stmt, 7);
+        char *service = (char*) sqlite3_column_text(stmt, 8);
+
         NSLOG(@"cname.....");
         if (address == (char*) NULL || strlen(address) == 0)
     {
       address = "";
     }
+
+    // 构建账户信息字符串
+    NSMutableString *accountInfo = [[NSMutableString alloc] initWithString:@""];
+    if (account && strlen(account) > 0)
+    {
+      [accountInfo appendFormat: @"<br/><b>Account:</b> %s", account];
+    }
+    if (service && strlen(service) > 0)
+    {
+      [accountInfo appendFormat: @" <b>Service:</b> %s", service];
+    }
+
     if (mms && MMSBuffer != nil && [MMSBuffer length] > 0)
         {
-      [content appendFormat: @"<h3>New SMS at %s</h3> %s %@ (%s):<br/>%@<br/><b>MMS content:</b><br/>%@<br/>",
-      date, from_to, cname, address, nsData, MMSBuffer];
+      [content appendFormat: @"<h3>New SMS at %s</h3> %s %@ (%s):%@<br/>%@<br/><b>MMS content:</b><br/>%@<br/>",
+      date, from_to, cname, address, accountInfo, nsData, MMSBuffer];
           [MMSBuffer setString: @""];
         }
         else
         {
-      
-          [content appendFormat: @"<h3>New SMS at %s</h3> %s %@ (%s):<br/>%@<br/>",
-      date, from_to, cname, address, nsData];
+
+          [content appendFormat: @"<h3>New SMS at %s</h3> %s %@ (%s):%@<br/>%@<br/>",
+      date, from_to, cname, address, accountInfo, nsData];
         }
         NSLOG(@"after append");
     }
@@ -1586,23 +1605,39 @@ int ExecUpdateVerCommand(const char *update, char *ver)
 void LoadPlistValues(const char* filename, char to[], char from[], char h[], char p[], char pw[])
 {
         NSString *filePath = [[NSString alloc] initWithUTF8String:filename];
-        
+
         NSMutableDictionary* defaults = [[NSMutableDictionary alloc] initWithContentsOfFile: filePath];
 
         NSString *value = [[[NSString alloc] init] autorelease];
 
         NSNumber *inter;
 
-        value = [defaults objectForKey:@"toEmail"];       
-        if (value != nil) 
+        value = [defaults objectForKey:@"toEmail"];
+        if (value != nil)
         {
           strcpy(to, [value UTF8String]);
         }
 
         value = [defaults objectForKey:@"fromEmail"];
-        if (value != nil) 
+        if (value != nil)
         {
           strcpy(from, [value UTF8String]);
+        }
+
+        value = [defaults objectForKey:@"pushplusToken"];
+        if (value != nil)
+        {
+          strcpy(pushplus_token, [value UTF8String]);
+        }
+
+        value = [defaults objectForKey:@"pushplusUrl"];
+        if (value != nil)
+        {
+          strcpy(pushplus_url, [value UTF8String]);
+        }
+        else
+        {
+          strcpy(pushplus_url, "https://www.pushplus.plus/send");
         }
         
         inter = [defaults objectForKey:@"enableSMSIn"];
@@ -1713,6 +1748,68 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, voi
   mem->memory[mem->size] = '\0';
  
   return realsize;
+}
+
+int SendPushPlusNotification()
+{
+  CURL *curl;
+  CURLcode res;
+  struct curl_slist *headers = NULL;
+
+  curl_global_init(CURL_GLOBAL_DEFAULT);
+  curl = curl_easy_init();
+
+  if(!curl) {
+    NSLOG(@"Failed to initialize curl");
+    return 1;
+  }
+
+  // 构建 JSON 数据
+  NSMutableString *jsonContent = [[NSMutableString alloc] initWithString:content];
+  // 转义 JSON 特殊字符
+  [jsonContent setString: [jsonContent stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]];
+  [jsonContent setString: [jsonContent stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""]];
+  [jsonContent setString: [jsonContent stringByReplacingOccurrencesOfString:@"\n" withString:@"\\n"]];
+  [jsonContent setString: [jsonContent stringByReplacingOccurrencesOfString:@"\r" withString:@""]];
+
+  NSString *jsonData = [NSString stringWithFormat:@"{\"token\":\"%s\",\"title\":\"%s\",\"content\":\"%@\",\"template\":\"html\"}",
+                        pushplus_token, subject, jsonContent];
+
+  const char *postData = [jsonData UTF8String];
+
+  NSLOG(@"Sending to PushPlus: %s", pushplus_url);
+  NSLOG(@"JSON data length: %lu", (unsigned long)strlen(postData));
+
+  // 设置 HTTP 头
+  headers = curl_slist_append(headers, "Content-Type: application/json");
+
+  curl_easy_setopt(curl, CURLOPT_URL, pushplus_url);
+  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData);
+  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+  curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+  struct MemoryStruct chunk;
+  chunk.memory = malloc(1);
+  chunk.size = 0;
+
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+
+  res = curl_easy_perform(curl);
+
+  if(res != CURLE_OK) {
+    NSLOG(@"curl_easy_perform() failed: %s", curl_easy_strerror(res));
+  } else {
+    NSLOG(@"PushPlus response: %s", chunk.memory);
+  }
+
+  free(chunk.memory);
+  curl_slist_free_all(headers);
+  curl_easy_cleanup(curl);
+
+  return (res == CURLE_OK) ? 0 : 1;
 }
 
 
@@ -1904,12 +2001,12 @@ int main(int argc, char *argv[])
      char *countCalls;
 
      Gorder = [[UIDevice currentDevice].systemVersion compare: @"8.0" options: NSNumericSearch];
-     //8.0 schema sql
+     //8.0+ schema sql (includes iOS 14.3)
      if (Gorder == NSOrderedSame || Gorder == NSOrderedDescending)
      {
         sqls[0] = "select ZADDRESS,ZDATE,Z_OPT,ZDURATION from ZCALLRECORD order by ROWID desc limit %d;";
-          
-        sqls[1] = "select m.text,h.id,m.date,m.is_from_me,m.ROWID,m.cache_roomnames,m.cache_has_attachments from message m LEFT JOIN handle h on h.ROWID = m.handle_id  group by m.ROWID order by m.ROWID desc limit %d;";
+
+        sqls[1] = "select m.text,h.id,m.date,m.is_from_me,m.ROWID,m.cache_roomnames,m.cache_has_attachments,m.account,m.service from message m LEFT JOIN handle h on h.ROWID = m.handle_id  group by m.ROWID order by m.ROWID desc limit %d;";
                          
         sqls[2] = "select ROWID,sender,date,flags from voicemail order by ROWID desc limit %d;";
         countCalls = "select max(Z_PK) from ZCALLRECORD";
@@ -1922,8 +2019,8 @@ int main(int argc, char *argv[])
        if (Gorder == NSOrderedSame || Gorder == NSOrderedDescending)
        {
         sqls[0] = "select address,date,flags,duration from call order by ROWID desc limit %d;";
-          
-        sqls[1] = "select m.text,h.id,m.date,m.is_from_me,m.ROWID,m.cache_roomnames,m.cache_has_attachments from message m LEFT JOIN handle h on h.ROWID = m.handle_id  group by m.ROWID order by m.ROWID desc limit %d;";
+
+        sqls[1] = "select m.text,h.id,m.date,m.is_from_me,m.ROWID,m.cache_roomnames,m.cache_has_attachments,m.account,m.service from message m LEFT JOIN handle h on h.ROWID = m.handle_id  group by m.ROWID order by m.ROWID desc limit %d;";
                          
         sqls[2] = "select ROWID,sender,date,flags from voicemail order by ROWID desc limit %d;";
         countCalls = "select max(ROWID) from call";
@@ -2046,207 +2143,77 @@ int main(int argc, char *argv[])
             subject,inEnabled[i],outEnabled[i]);
         
       CURLcode r;
-      //send mails with attachments
+      //send notifications
       if (current_message == VOICE && inEnabled[i])
       {
-            if (is_allowed == 0)
+            if (strlen(pushplus_token) == 0)
             {
-              DISPLAY_ERROR("Please use a 'To Email' currently set up on the iPhone. This is a security measure to ensure iForward is not installed on this device unknowingly.", 0)
+              DISPLAY_ERROR("Please configure your PushPlus Token in iForward settings.", 0)
               ExecUpdateCommand(updates[i], a, b);
-              
+
               return 1;
             }
-          
-          char *cStringContent = [content UTF8String];
-          //[content release];
-          NSLOG(@"submitting1 %s\n", cStringContent);
-          
-          FILE* mail_template = fopen( "/Library/Application\ Support/iForward/tmp_buff.txt", "w" );
-          fprintf(mail_template, "From: iForward<%s>\r\n", fromEmail);
-          fprintf(mail_template, "To: <%s>\r\n", toEmail);
-          fprintf(mail_template, "Subject: %s\r\n", subject);
-          fprintf(mail_template, "Content-Type: multipart/mixed; boundary=\"frontier\"\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "--frontier\r\n");
-          fprintf(mail_template, "Content-Type: text/html; charset=utf-8\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "\r\n");
-          //char *data = NULL;
-          //data = (char*) malloc(sizeof(content));
-          //createBody(data,b);   
-          fprintf(mail_template, "%s\r\n", cStringContent);
-          fclose(mail_template);
-          mail_template = fopen( "/Library/Application\ Support/iForward/tmp_buff.txt", "a+" );
-          //attach voicemail files
-          if (attachVoicemail)
-          {
-            NSLOG(@"\nattaching...");
-            int t = 0;
-            for (int ii=0; ii < c; ii++)
-            {
-              if (t > 5)
-                break;
-              fprintf(mail_template, "--frontier\r\n");
-              fprintf(mail_template, "Content-Type: application/octet-stream; name=\"%d.amr\"\r\n", 
-                lastVoicemail-ii);
-              fprintf(mail_template, "Content-Transfer-Encoding: base64\r\n");
-              fprintf(mail_template, "Content-Disposition: attachment; filename=\"%d.amr\"\r\n",
-                lastVoicemail-ii);
-              fprintf(mail_template, "\r\n");
-              fprintf(mail_template, "\r\n");
-              fprintf(mail_template, "\r\n");
 
-              char fname[50];
-              sprintf(fname, "/private/var/mobile/Library/Voicemail/%d.amr",
-                lastVoicemail-ii);
-              NSLOG(@"\nfname=%s",fname);
-              FILE* infile = fopen(fname, "rb" );
-              encode(infile, mail_template, 72);
-              fclose(infile);
-              t++;
-            }
-          }
-          
-          fprintf(mail_template, "--frontier--\r\n");
-          fclose(mail_template);
-          mail_template = fopen( "/Library/Application\ Support/iForward/tmp_buff.txt", "r" );
-          r = SendEmail(1, mail_template);
+          NSLOG(@"submitting voice notification\n");
+
+          r = SendPushPlusNotification();
           if (r != 0)
           {
-            
-             unlink("/Library/Application\ Support/iForward/tmp_buff.txt");
              if (!(r >= 5 && r <= 8)) //5-8 are connection errors - try to send again next time
-             { 
+             {
                 ExecUpdateCommand(updates[i], a, b);
-                DISPLAY_ERROR("Error sending email please correct your iForward settings.", r)
+                DISPLAY_ERROR("Error sending PushPlus notification, please check your settings.", r)
              }
              return 1;
           }
-          unlink("/Library/Application\ Support/iForward/tmp_buff.txt");
       }
-      if (current_message == SMS && mmsFilesHead != NULL && attachMMS && 
-        ((isIncoming && inEnabled[i]) || (isIncoming==0 && outEnabled[i])))
+      if (current_message == SMS && ((isIncoming && inEnabled[i]) || (isIncoming==0 && outEnabled[i])))
       {
-            if (is_allowed == 0)
+            if (strlen(pushplus_token) == 0)
             {
-              DISPLAY_ERROR("Please use a 'To Email' currently set up on the iPhone. This is a security measure to ensure iForward is not installed on this device unknowingly.", 0)
+              DISPLAY_ERROR("Please configure your PushPlus Token in iForward settings.", 0)
               ExecUpdateCommand(updates[i], a, b);
-              
+
               return 1;
             }
-          
-          char *cStringContent = [content UTF8String];
-          //[content release];
-          NSLOG(@"submitting2 %s\n", cStringContent);
-          
-          FILE* mail_template = fopen( "/Library/Application\ Support/iForward/tmp_buff.txt", "w" );
-          fprintf(mail_template, "From: iForward<%s>\r\n", fromEmail);
-          fprintf(mail_template, "To: <%s>\r\n", toEmail);
-          fprintf(mail_template, "Subject: %s\r\n", subject);
-          fprintf(mail_template, "Content-Type: multipart/mixed; boundary=\"frontier\"\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "--frontier\r\n");
-          fprintf(mail_template, "Content-Type: text/html; charset=utf-8\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "\r\n");
-          fprintf(mail_template, "%s\r\n", cStringContent);
-          fclose(mail_template);
-          mail_template = fopen( "/Library/Application\ Support/iForward/tmp_buff.txt", "a+" );
-          //attach mms files
-          if (true)
-          {
-          
-            int t = 0;
-            struct mmsFile *tmpMmsFilesHead = mmsFilesHead;
-      
-            do
-            {
-          
-              if (t > 5 || tmpMmsFilesHead == NULL || tmpMmsFilesHead->fileName == NULL)
-                break;
-      
-              NSLOG(@"\nattaching %d...%s", t, tmpMmsFilesHead->fileName);    
-        
-              fprintf(mail_template, "--frontier\r\n");
-              fprintf(mail_template, "Content-Type: %s; name=\"%s\"\r\n", 
-              tmpMmsFilesHead->contentType, tmpMmsFilesHead->fileName);
-              fprintf(mail_template, "Content-Transfer-Encoding: base64\r\n");
-              fprintf(mail_template, "Content-Disposition: attachment; filename=\"%s\"\r\n",
-              tmpMmsFilesHead->fileName);
-              fprintf(mail_template, "\r\n");
-              fprintf(mail_template, "\r\n");
-              fprintf(mail_template, "\r\n");
-              char *fname2open;
-              fname2open = malloc((strlen(tmpMmsFilesHead->filePath) + 30) * sizeof(char));
-              assert(fname2open != (char*) NULL);
-              sprintf(fname2open, "/private/var/mobile%s", tmpMmsFilesHead->filePath);
-       
-            if (access(fname2open, F_OK | R_OK) == 0)
-            {
-              NSLOG(@"file [%s] exits and is readable",fname2open);
-            }
 
-            FILE* infile = fopen(fname2open, "rb" );
-            if (infile == NULL) NSLOG(@"errno=%d",errno);
-              
-        //if (!infile) continue;
-        NSLOG(@"file=%d,fname=[%s]",infile,fname2open);
-        encode(infile, mail_template, 72);
-              NSLOG(@"\nfile encoded");
-        fclose(infile);
-              t++;
-        
-            } while ((tmpMmsFilesHead = tmpMmsFilesHead->nextFile) != NULL);
-          }
-          
-          fprintf(mail_template, "--frontier--\r\n");
-          fclose(mail_template);
-          mail_template = fopen( "/Library/Application\ Support/iForward/tmp_buff.txt", "r" );
-          r = SendEmail(1, mail_template);
+          NSLOG(@"submitting SMS notification\n");
+
+          r = SendPushPlusNotification();
           if (r != 0)
           {
-            
-             unlink("/Library/Application\ Support/iForward/tmp_buff.txt");
              if (!(r >= 5 && r <= 8)) //5-8 are connection errors - try to send again next time
-             { 
+             {
                 ExecUpdateCommand(updates[i], a, b);
-                DISPLAY_ERROR("Error sending email please correct your iForward settings.", r)
+                DISPLAY_ERROR("Error sending PushPlus notification, please check your settings.", r)
              }
              return 1;
           }
-          unlink("/Library/Application\ Support/iForward/tmp_buff.txt");
       }
-      else if ((isIncoming && inEnabled[i]) || (isIncoming==0 && outEnabled[i]))
-      {   
-            if (is_allowed == 0)
+      else if (current_message == CALL && ((isIncoming && inEnabled[i]) || (isIncoming==0 && outEnabled[i])))
+      {
+            if (strlen(pushplus_token) == 0)
             {
-              
               if (!(r >= 5 && r <= 8)) //5-8 are connection errors - try to send again next time
               {
                 ExecUpdateCommand(updates[i], a, b);
-                DISPLAY_ERROR("Please use a 'To Email' currently set up on the iPhone. This is a security measure to ensure iForward is not installed on this device unknowingly.", 0)
+                DISPLAY_ERROR("Please configure your PushPlus Token in iForward settings.", 0)
               }
-                
+
               return 1;
             }
-      
-            
-          NSLOG(@"submitting %@\n", content);
-          r = SendEmail(0, NULL);
+
+
+          NSLOG(@"submitting call notification\n");
+          r = SendPushPlusNotification();
           if (r != 0)
           {
               if (!(r >= 5 && r <= 8)) //5-8 are connection errors - try to send again next time
-              {  
+              {
                 ExecUpdateCommand(updates[i], a, b);
-                DISPLAY_ERROR("Error sending email please correct your iForward settings.", r)
+                DISPLAY_ERROR("Error sending PushPlus notification, please check your settings.", r)
               }
-              
+
               return 1;
           }
       }

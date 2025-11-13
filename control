@@ -1,0 +1,27 @@
+Package: com.iforward.pushplus
+Name: iForward-PushPlus
+Version: 2.0.0
+Architecture: iphoneos-arm
+Description: Forward SMS, calls, and voicemails to PushPlus notification service. Supports dual SIM identification and works with iOS 14+.
+ This tweak monitors your device for incoming/outgoing SMS, iMessages, calls, and voicemails, then forwards them to PushPlus (pushplus.plus) for real-time notifications.
+ .
+ Features:
+ - SMS/iMessage forwarding with sender identification
+ - Call notifications with duration tracking
+ - Voicemail alerts
+ - Dual SIM support (shows Account ID and Service type)
+ - Contact name resolution from Address Book
+ - Configurable notification subjects
+ - Works in background via LaunchDaemon
+ .
+ Configuration: Settings → iForward
+ Requires: PushPlus account and token from https://www.pushplus.plus
+Homepage: https://github.com/spacex-3/iForward-push
+Maintainer: spacex-3 <fantasysk@qq.com>
+Author: spacex-3 <fantasysk@qq.com>
+Section: Utilities
+Depends: firmware (>= 14.0), curl, sqlite3
+Conflicts: com.iforward.original
+Replaces: com.iforward.original
+Priority: optional
+Tag: purpose::daemon, role::enduser
