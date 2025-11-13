@@ -21,12 +21,14 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        brew install ldid xz make
+        brew install ldid xz make curl
 
     - name: Setup Theos
       run: |
         git clone --recursive https://github.com/theos/theos.git $HOME/theos
         echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+        # Create lib directory for iOS libraries
+        mkdir -p $HOME/theos/lib
 
     - name: Download iOS SDKs
       run: |
