@@ -20,7 +20,7 @@
    <true/>
 
     <key>StartInterval</key>
-    <integer>160</integer>
+    <integer>30</integer>
 
     <key>StandardErrorPath</key>
     <string>/dev/null</string>

@@ -39,9 +39,9 @@ internal-stage::
 
 # Actions to run after installation on device
 after-install::
-	install.exec "mkdir -p /Library/Application\ Support/iForward"
-	install.exec "chmod 644 /Library/LaunchDaemons/com.iforward.plist"
-	install.exec "sqlite3 /Library/Application\ Support/iForward/iForward.db 'CREATE TABLE IF NOT EXISTS call (ROWID INTEGER PRIMARY KEY); CREATE TABLE IF NOT EXISTS message (ROWID INTEGER PRIMARY KEY); CREATE TABLE IF NOT EXISTS voicemail (ROWID INTEGER PRIMARY KEY); INSERT OR REPLACE INTO call (ROWID) VALUES (-1); INSERT OR REPLACE INTO message (ROWID) VALUES (-1); INSERT OR REPLACE INTO voicemail (ROWID) VALUES (-1);'"
-	install.exec "chmod 666 /Library/Application\ Support/iForward/iForward.db"
-	install.exec "launchctl unload /Library/LaunchDaemons/com.iforward.plist 2>/dev/null || true"
-	install.exec "launchctl load /Library/LaunchDaemons/com.iforward.plist"
+	install.exec 'mkdir -p "/Library/Application Support/iForward"'
+	install.exec 'chmod 644 /Library/LaunchDaemons/com.iforward.plist'
+	install.exec 'sqlite3 "/Library/Application Support/iForward/iForward.db" "CREATE TABLE IF NOT EXISTS call (ROWID INTEGER PRIMARY KEY); CREATE TABLE IF NOT EXISTS message (ROWID INTEGER PRIMARY KEY); CREATE TABLE IF NOT EXISTS voicemail (ROWID INTEGER PRIMARY KEY); INSERT OR REPLACE INTO call (ROWID) VALUES (-1); INSERT OR REPLACE INTO message (ROWID) VALUES (-1); INSERT OR REPLACE INTO voicemail (ROWID) VALUES (-1);"'
+	install.exec 'chmod 666 "/Library/Application Support/iForward/iForward.db"'
+	install.exec 'launchctl unload /Library/LaunchDaemons/com.iforward.plist 2>/dev/null || true'
+	install.exec 'launchctl load /Library/LaunchDaemons/com.iforward.plist'

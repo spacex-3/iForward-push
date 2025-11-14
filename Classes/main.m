@@ -1302,16 +1302,19 @@ int ExecSMSCommand6(const char *cmd, int limit)
     }
 
         number = sqlite3_column_int(stmt, 2);
+        NSLOG(@"[DEBUG ExecSMSCommand6] Raw date from DB: %d", number);
         struct tm tim;
         time_t now;
         // iOS uses Mac Absolute Time (seconds since 2001-01-01 00:00:00)
         // Convert to Unix timestamp by adding reference date offset
         const time_t MAC_EPOCH_OFFSET = 978307200;
         now = (time_t) number + MAC_EPOCH_OFFSET;
+        NSLOG(@"[DEBUG ExecSMSCommand6] After +MAC_EPOCH_OFFSET: %ld", (long)now);
         if (now > 0)
         {
           tim = *(localtime(&now));
           strftime(date,30,"%b %d, %Y  %I:%M:%S %p",&tim);
+          NSLOG(@"[DEBUG ExecSMSCommand6] Formatted date: %s", date);
         }
 
         int is_from_me = sqlite3_column_int(stmt, 3);
@@ -1336,33 +1339,24 @@ int ExecSMSCommand6(const char *cmd, int limit)
         char *service = (char*) sqlite3_column_text(stmt, 8);
 
         NSLOG(@"cname.....");
+        NSLOG(@"[DEBUG] Raw date value: %d, account: %s, service: %s", number,
+              account ? account : "NULL", service ? service : "NULL");
         if (address == (char*) NULL || strlen(address) == 0)
     {
       address = "";
     }
 
-    // 构建账户信息字符串
-    NSMutableString *accountInfo = [[NSMutableString alloc] initWithString:@""];
-    if (account && strlen(account) > 0)
-    {
-      [accountInfo appendFormat: @"<br/><b>Account:</b> %s", account];
-    }
-    if (service && strlen(service) > 0)
-    {
-      [accountInfo appendFormat: @" <b>Service:</b> %s", service];
-    }
-
     if (mms && MMSBuffer != nil && [MMSBuffer length] > 0)
         {
-      [content appendFormat: @"<h3>New SMS at %s</h3> %s %@ (%s):%@<br/>%@<br/><b>MMS content:</b><br/>%@<br/>",
-      date, from_to, cname, address, accountInfo, nsData, MMSBuffer];
+      [content appendFormat: @"<h3>New SMS at %s</h3> %s %@ (%s)<br/>%@<br/><b>MMS content:</b><br/>%@<br/>",
+      date, from_to, cname, address, nsData, MMSBuffer];
           [MMSBuffer setString: @""];
         }
         else
         {
 
-          [content appendFormat: @"<h3>New SMS at %s</h3> %s %@ (%s):%@<br/>%@<br/>",
-      date, from_to, cname, address, accountInfo, nsData];
+          [content appendFormat: @"<h3>New SMS at %s</h3> %s %@ (%s)<br/>%@<br/>",
+      date, from_to, cname, address, nsData];
         }
         NSLOG(@"after append");
     }
