@@ -93,10 +93,7 @@ int sqlType = 0;
   CFUserNotificationDisplayAlert(20.0, 3, NULL, NULL, NULL, CFSTR("iForward Error"), iError, CFSTR("OK"), NULL, NULL, &responseFlags); \
 } \
 
-#define NSLOG(...) \
-{ \
-  if (debugOn) NSLog(__VA_ARGS__); \
-} \
+#define NSLOG(...) NSLog(__VA_ARGS__)
 
 /*
 ** Translation Table as described in RFC1113
