@@ -1,8 +1,8 @@
 export THEOS_DEVICE_IP=localhost
 export THEOS_DEVICE_PORT=2222
 
-# Target iOS 14.0+ with arm64 and arm64e support
-ARCHS = arm64 arm64e
+# Target iOS 14.0+ with arm64 only (arm64e removed due to libcurl incompatibility)
+ARCHS = arm64
 TARGET = iphone:clang:14.5:14.0
 
 include $(THEOS)/makefiles/common.mk

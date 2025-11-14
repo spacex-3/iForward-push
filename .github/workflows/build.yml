@@ -29,7 +29,7 @@ jobs:
         echo "THEOS=$HOME/theos" >> $GITHUB_ENV
         # Create lib directory for iOS libraries
         mkdir -p $HOME/theos/lib
-        # Create libcurl stub dylib for linking
+        # Create libcurl stub dylib for linking (arm64 only, no arm64e)
         cat > curl_stub.c << 'EOF'
         void curl_easy_cleanup(void *handle) { __builtin_trap(); }
         void *curl_easy_init(void) { __builtin_trap(); return 0; }
@@ -42,7 +42,7 @@ jobs:
         void curl_slist_free_all(void *list) { __builtin_trap(); }
         void *curl_version_info(int type) { __builtin_trap(); return 0; }
         EOF
-        xcrun -sdk iphoneos clang -arch arm64 -arch arm64e -dynamiclib \
+        xcrun -sdk iphoneos clang -arch arm64 -dynamiclib \
           -install_name /usr/lib/libcurl.dylib \
           -o $HOME/theos/lib/libcurl.dylib \
           curl_stub.c
