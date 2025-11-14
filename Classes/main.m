@@ -1984,8 +1984,18 @@ void InitializeLocalDatabase()
 
   // Create directories with proper permissions
   NSLOG(@"[InitDB] Creating directories...");
-  mkdir("/Library/Application Support", 0777);
-  mkdir("/Library/Application Support/iForward", 0777);
+
+  // Create parent directory first
+  int ret1 = mkdir("/Library/Application Support", 0777);
+  NSLOG(@"[InitDB] mkdir '/Library/Application Support' returned: %d (errno=%d: %s)",
+        ret1, errno, strerror(errno));
+
+  // Create iForward subdirectory
+  int ret2 = mkdir("/Library/Application Support/iForward", 0777);
+  NSLOG(@"[InitDB] mkdir '/Library/Application Support/iForward' returned: %d (errno=%d: %s)",
+        ret2, errno, strerror(errno));
+
+  // Create log directory
   mkdir("/var/mobile/Library/Logs", 0777);
 
   // Check if database exists and fix permissions if needed
@@ -2005,9 +2015,12 @@ void InitializeLocalDatabase()
   rc = sqlite3_open(DB_LOCAL, &db);
   if (rc != SQLITE_OK)
   {
-    NSLOG(@"[InitDB] Failed to open database: %s", sqlite3_errmsg(db));
+    NSLOG(@"[InitDB] Failed to open database: %s (error code: %d)", sqlite3_errmsg(db), rc);
+    NSLOG(@"[InitDB] Attempted path: %s", DB_LOCAL);
     return;
   }
+
+  NSLOG(@"[InitDB] Database opened successfully");
 
   // Create tables if they don't exist
   const char *sql =
