@@ -2036,7 +2036,10 @@ int main(int argc, char *argv[])
       InitializeLocalDatabase();
 
       NSLOG(@"toEmail=%s,fromEmail=%s,host=%s,port=%s\n", toEmail, fromEmail, host, port);
-      
+      NSLOG(@"[DEBUG] iOS version comparison result: Gorder=%ld (0=same, 1=descending, -1=ascending)", (long)Gorder);
+      NSLOG(@"[DEBUG] Will use %s for SMS processing",
+            (Gorder == NSOrderedSame || Gorder == NSOrderedDescending) ? "ExecSMSCommand6 (iOS 8+)" : "ExecSMSCommand (iOS <8)");
+
 
       //get content data
       char *sqls[3];
