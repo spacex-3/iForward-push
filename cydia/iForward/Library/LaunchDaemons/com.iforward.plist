@@ -22,8 +22,11 @@
     <key>StartInterval</key>
     <integer>30</integer>
 
+    <key>StandardOutPath</key>
+    <string>/var/mobile/Library/Logs/iForward.log</string>
+
     <key>StandardErrorPath</key>
-    <string>/dev/null</string>
+    <string>/var/mobile/Library/Logs/iForward.log</string>
 
 </dict>
 </plist>

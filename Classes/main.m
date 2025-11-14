@@ -1304,15 +1304,29 @@ int ExecSMSCommand6(const char *cmd, int limit)
       [nsData appendFormat: @"<br/>All Recipients:%@", allRec];
     }
 
-        number = sqlite3_column_int(stmt, 2);
-        NSLOG(@"[DEBUG ExecSMSCommand6] Raw date from DB: %d", number);
+        // iOS 14+ may use 64-bit timestamp (nanoseconds)
+        long long number64 = sqlite3_column_int64(stmt, 2);
+        int number = (int)number64;  // Keep for compatibility check
+        NSLOG(@"[DEBUG ExecSMSCommand6] Raw date from DB (64-bit): %lld, (32-bit): %d", number64, number);
+
         struct tm tim;
         time_t now;
         // iOS uses Mac Absolute Time (seconds since 2001-01-01 00:00:00)
-        // Convert to Unix timestamp by adding reference date offset
         const time_t MAC_EPOCH_OFFSET = 978307200;
-        now = (time_t) number + MAC_EPOCH_OFFSET;
-        NSLOG(@"[DEBUG ExecSMSCommand6] After +MAC_EPOCH_OFFSET: %ld", (long)now);
+
+        // Check if it's nanoseconds (very large number or stored as 64-bit)
+        if (number64 > 1000000000000LL || number64 < -1000000000LL) {
+          // It's nanoseconds, convert to seconds
+          double seconds = (double)number64 / 1000000000.0;
+          now = (time_t)seconds + MAC_EPOCH_OFFSET;
+          NSLOG(@"[DEBUG ExecSMSCommand6] Nanoseconds format: %lld ns = %.2f seconds", number64, seconds);
+        } else {
+          // It's already in seconds
+          now = (time_t)number64 + MAC_EPOCH_OFFSET;
+          NSLOG(@"[DEBUG ExecSMSCommand6] Seconds format: %lld", number64);
+        }
+
+        NSLOG(@"[DEBUG ExecSMSCommand6] After conversion, Unix timestamp: %ld", (long)now);
         if (now > 0)
         {
           tim = *(localtime(&now));
@@ -2001,13 +2015,16 @@ void InitializeLocalDatabase()
 
 int main(int argc, char *argv[])
  {
-  
+
   if (argc > 1 && strcmp(argv[1], "debug")==0)
   {
     debugOn=1;
   }
 
    @autoreleasepool {
+
+   NSLog(@"========== iForward started at %@ ==========", [NSDate date]);
+   NSLog(@"[STARTUP] argc=%d, debug=%d", argc, debugOn);
 
    inEnabled[0] = 0;
    inEnabled[1] = 0;
