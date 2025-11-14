@@ -1982,22 +1982,24 @@ void InitializeLocalDatabase()
   char *errMsg = NULL;
   int rc;
 
-  // Check if database exists
+  // Create directories with proper permissions
+  NSLOG(@"[InitDB] Creating directories...");
+  mkdir("/Library/Application Support", 0777);
+  mkdir("/Library/Application Support/iForward", 0777);
+  mkdir("/var/mobile/Library/Logs", 0777);
+
+  // Check if database exists and fix permissions if needed
   FILE *dbFile = fopen(DB_LOCAL, "r");
-  if (!dbFile)
+  if (dbFile)
   {
-    NSLOG(@"[InitDB] Database doesn't exist, creating...");
-    // Create directory first - need to create /Library/Application Support/iForward
-    mkdir("/Library/Application Support", 0755);
-    mkdir("/Library/Application Support/iForward", 0755);
+    fclose(dbFile);
+    NSLOG(@"[InitDB] Database exists, fixing permissions...");
+    chmod(DB_LOCAL, 0666);
   }
   else
   {
-    fclose(dbFile);
+    NSLOG(@"[InitDB] Database doesn't exist, will create...");
   }
-
-  // Create log directory
-  mkdir("/var/mobile/Library/Logs", 0755);
 
   // Open or create database
   rc = sqlite3_open(DB_LOCAL, &db);
@@ -2029,8 +2031,9 @@ void InitializeLocalDatabase()
 
   sqlite3_close(db);
 
-  // Set permissions
+  // Set permissions again after closing
   chmod(DB_LOCAL, 0666);
+  NSLOG(@"[InitDB] Set database permissions to 0666");
 }
 
 int main(int argc, char *argv[])
