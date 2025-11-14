@@ -1942,6 +1942,59 @@ int SendEmail(int mode, FILE *mail_template)
 
 extern int errno;
 
+void InitializeLocalDatabase()
+{
+  sqlite3 *db;
+  char *errMsg = NULL;
+  int rc;
+
+  // Check if database exists
+  FILE *dbFile = fopen(DB_LOCAL, "r");
+  if (!dbFile)
+  {
+    NSLOG(@"[InitDB] Database doesn't exist, creating...");
+    // Create directory first
+    system("mkdir -p \"/Library/Application Support/iForward\"");
+  }
+  else
+  {
+    fclose(dbFile);
+  }
+
+  // Open or create database
+  rc = sqlite3_open(DB_LOCAL, &db);
+  if (rc != SQLITE_OK)
+  {
+    NSLOG(@"[InitDB] Failed to open database: %s", sqlite3_errmsg(db));
+    return;
+  }
+
+  // Create tables if they don't exist
+  const char *sql =
+    "CREATE TABLE IF NOT EXISTS call (ROWID INTEGER PRIMARY KEY);"
+    "CREATE TABLE IF NOT EXISTS message (ROWID INTEGER PRIMARY KEY);"
+    "CREATE TABLE IF NOT EXISTS voicemail (ROWID INTEGER PRIMARY KEY);"
+    "INSERT OR IGNORE INTO call (ROWID) VALUES (-1);"
+    "INSERT OR IGNORE INTO message (ROWID) VALUES (-1);"
+    "INSERT OR IGNORE INTO voicemail (ROWID) VALUES (-1);";
+
+  rc = sqlite3_exec(db, sql, NULL, NULL, &errMsg);
+  if (rc != SQLITE_OK)
+  {
+    NSLOG(@"[InitDB] SQL error: %s", errMsg);
+    sqlite3_free(errMsg);
+  }
+  else
+  {
+    NSLOG(@"[InitDB] Database initialized successfully");
+  }
+
+  sqlite3_close(db);
+
+  // Set permissions
+  chmod(DB_LOCAL, 0666);
+}
+
 int main(int argc, char *argv[])
  {
   
@@ -1978,7 +2031,9 @@ int main(int argc, char *argv[])
     //Library/PreferenceLoader/Preferences/iForward.plist
      LoadPlistValues("/private/var/mobile/Library/Preferences/com.iforward.plist",
                                                 toEmail, fromEmail, host, port, pw);
-  
+
+      // Initialize local database (auto-create if needed)
+      InitializeLocalDatabase();
 
       NSLOG(@"toEmail=%s,fromEmail=%s,host=%s,port=%s\n", toEmail, fromEmail, host, port);
       
