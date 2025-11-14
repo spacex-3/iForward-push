@@ -13,6 +13,8 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/file.h>
+#include <fcntl.h>
 #include <errno.h>
 
 
@@ -2061,6 +2063,22 @@ int main(int argc, char *argv[])
 
    NSLog(@"========== iForward started at %@ ==========", [NSDate date]);
    NSLog(@"[STARTUP] argc=%d, debug=%d", argc, debugOn);
+
+   // Acquire lock to prevent concurrent execution
+   int lockfd = open("/var/tmp/iforward.lock", O_CREAT | O_RDWR, 0666);
+   if (lockfd < 0) {
+     NSLog(@"[LOCK] Failed to open lock file: %s", strerror(errno));
+     return 1;
+   }
+
+   // Try to acquire exclusive lock (non-blocking)
+   if (flock(lockfd, LOCK_EX | LOCK_NB) != 0) {
+     NSLog(@"[LOCK] Another instance is running, exiting...");
+     close(lockfd);
+     return 0;  // Exit gracefully, not an error
+   }
+
+   NSLog(@"[LOCK] Acquired lock successfully");
 
    inEnabled[0] = 0;
    inEnabled[1] = 0;
