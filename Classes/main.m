@@ -1154,9 +1154,12 @@ int ExecSMSCommand(const char *cmd, int limit)
         number = sqlite3_column_int(stmt, 2);
         struct tm tim;
         time_t now;
-        now = (time_t) number;
+        // iOS uses Mac Absolute Time (seconds since 2001-01-01 00:00:00)
+        // Convert to Unix timestamp by adding reference date offset
+        const time_t MAC_EPOCH_OFFSET = 978307200;
+        now = (time_t) number + MAC_EPOCH_OFFSET;
         NSLOG(@"number=%d",number);
-        if (now > 0) 
+        if (now > 0)
         {
           tim = *(localtime(&now));
           strftime(date,30,"%b %d, %Y  %I:%M:%S %p",&tim);
