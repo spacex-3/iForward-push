@@ -950,7 +950,7 @@ int ExecIMessageCommand(int limit)
         char *text;
         //char *textSMS;
         const unsigned char *address;
-        char date[60]; int number;
+        char date[60];
         int flags;
         int mms = 0;
         
@@ -977,13 +977,23 @@ int ExecIMessageCommand(int limit)
     
         address = sqlite3_column_text(stmt, 1);
 
-        number = sqlite3_column_int(stmt, 2);
+        // iOS 14+ may use 64-bit timestamp (nanoseconds)
+        long long number64 = sqlite3_column_int64(stmt, 2);
         struct tm tim;
         time_t now;
         // iOS uses Mac Absolute Time (seconds since 2001-01-01 00:00:00)
-        // Convert to Unix timestamp by adding reference date offset
         const time_t MAC_EPOCH_OFFSET = 978307200;
-        now = (time_t) number + MAC_EPOCH_OFFSET;
+
+        // Check if it's nanoseconds (very large number or stored as 64-bit)
+        if (number64 > 1000000000000LL || number64 < -1000000000LL) {
+          // It's nanoseconds, convert to seconds
+          double seconds = (double)number64 / 1000000000.0;
+          now = (time_t)seconds + MAC_EPOCH_OFFSET;
+        } else {
+          // It's already in seconds
+          now = (time_t)number64 + MAC_EPOCH_OFFSET;
+        }
+
         if (now > 0)
         {
           tim = *(localtime(&now));
@@ -1100,11 +1110,11 @@ int ExecSMSCommand(const char *cmd, int limit)
       times++;
       continue;
     } 
-    if (s == SQLITE_ROW) 
-    {    
+    if (s == SQLITE_ROW)
+    {
         char *text;
         //char *textSMS;
-        char date[60]; int number;
+        char date[60];
         int flags;
         int rowid __attribute__((unused)) = sqlite3_column_int(stmt, 1);
     
@@ -1153,15 +1163,25 @@ int ExecSMSCommand(const char *cmd, int limit)
             }
         }
         NSLOG(@"All recipients");
-        
-        number = sqlite3_column_int(stmt, 2);
+
+        // iOS 14+ may use 64-bit timestamp (nanoseconds)
+        long long number64 = sqlite3_column_int64(stmt, 2);
         struct tm tim;
         time_t now;
         // iOS uses Mac Absolute Time (seconds since 2001-01-01 00:00:00)
-        // Convert to Unix timestamp by adding reference date offset
         const time_t MAC_EPOCH_OFFSET = 978307200;
-        now = (time_t) number + MAC_EPOCH_OFFSET;
-        NSLOG(@"number=%d",number);
+
+        // Check if it's nanoseconds (very large number or stored as 64-bit)
+        if (number64 > 1000000000000LL || number64 < -1000000000LL) {
+          // It's nanoseconds, convert to seconds
+          double seconds = (double)number64 / 1000000000.0;
+          now = (time_t)seconds + MAC_EPOCH_OFFSET;
+        } else {
+          // It's already in seconds
+          now = (time_t)number64 + MAC_EPOCH_OFFSET;
+        }
+
+        NSLOG(@"number64=%lld",number64);
         if (now > 0)
         {
           tim = *(localtime(&now));
@@ -1262,9 +1282,9 @@ int ExecSMSCommand6(const char *cmd, int limit)
     if (s == SQLITE_ROW) 
     {
     //select m.text,h.id,m.date,m.is_from_me,m.ROWID,m.cache_roomnames,m.cache_has_attachments
-    
+
         char *text;
-        char date[60]; int number;
+        char date[60];
         int flags __attribute__((unused));
         char* roomid = (char*) sqlite3_column_text(stmt, 5);
     
