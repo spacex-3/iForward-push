@@ -1999,6 +1999,9 @@ void InitializeLocalDatabase()
     fclose(dbFile);
   }
 
+  // Create log directory
+  mkdir("/var/mobile/Library/Logs", 0755);
+
   // Open or create database
   rc = sqlite3_open(DB_LOCAL, &db);
   if (rc != SQLITE_OK)
