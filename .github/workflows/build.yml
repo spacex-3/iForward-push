@@ -29,8 +29,6 @@ jobs:
         echo "THEOS=$HOME/theos" >> $GITHUB_ENV
         # Create lib directory for iOS libraries
         mkdir -p $HOME/theos/lib
-        # Copy libcurl.tbd stub for linking
-        cp libcurl.tbd $HOME/theos/lib/
 
     - name: Download iOS SDKs
       run: |
@@ -44,6 +42,15 @@ jobs:
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
         make clean || true
+        make FINALPACKAGE=1
+        # Add libcurl.dylib dependency to each architecture
+        for arch in arm64 arm64e; do
+          if [ -f ".theos/obj/$arch/iForward" ]; then
+            echo "Adding libcurl dependency to $arch binary..."
+            python3 add_load_dylib.py ".theos/obj/$arch/iForward" /usr/lib/libcurl.dylib
+          fi
+        done
+        # Repackage with modified binaries
         make package FINALPACKAGE=1
       env:
         THEOS: ${{ env.THEOS }}
