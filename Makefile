@@ -18,11 +18,11 @@ iForward_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 iForward_FRAMEWORKS = UIKit Foundation AddressBook CoreGraphics CoreData CoreFoundation QuartzCore
 
 # Libraries
-# Use -undefined dynamic_lookup to allow curl symbols to be undefined
-# Then use a post-build hook to add libcurl.dylib dependency
-iForward_LDFLAGS = -lsqlite3 -undefined dynamic_lookup
+# Link against stub libcurl.dylib (created in GitHub Actions)
+# Stub has install_name=/usr/lib/libcurl.dylib so runtime will load system curl
+iForward_LDFLAGS = -lsqlite3 -lcurl
 
-# Install path
+# Install path - binary goes to iForward.bin, wrapper script to iForward
 iForward_INSTALL_PATH = /usr/bin
 
 include $(THEOS)/makefiles/tool.mk

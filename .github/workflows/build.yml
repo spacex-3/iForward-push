@@ -29,6 +29,24 @@ jobs:
         echo "THEOS=$HOME/theos" >> $GITHUB_ENV
         # Create lib directory for iOS libraries
         mkdir -p $HOME/theos/lib
+        # Create libcurl stub dylib for linking
+        cat > curl_stub.c << 'EOF'
+        void curl_easy_cleanup(void *handle) { __builtin_trap(); }
+        void *curl_easy_init(void) { __builtin_trap(); return 0; }
+        int curl_easy_perform(void *handle) { __builtin_trap(); return 0; }
+        int curl_easy_setopt(void *handle, int option, ...) { __builtin_trap(); return 0; }
+        const char *curl_easy_strerror(int code) { __builtin_trap(); return ""; }
+        int curl_global_init(long flags) { __builtin_trap(); return 0; }
+        void curl_global_cleanup(void) { __builtin_trap(); }
+        void *curl_slist_append(void *list, const char *string) { __builtin_trap(); return 0; }
+        void curl_slist_free_all(void *list) { __builtin_trap(); }
+        void *curl_version_info(int type) { __builtin_trap(); return 0; }
+        EOF
+        xcrun -sdk iphoneos clang -arch arm64 -arch arm64e -dynamiclib \
+          -install_name /usr/lib/libcurl.dylib \
+          -o $HOME/theos/lib/libcurl.dylib \
+          curl_stub.c
+        rm curl_stub.c
 
     - name: Download iOS SDKs
       run: |
@@ -42,15 +60,6 @@ jobs:
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
         make clean || true
-        make FINALPACKAGE=1
-        # Add libcurl.dylib dependency to each architecture
-        for arch in arm64 arm64e; do
-          if [ -f ".theos/obj/$arch/iForward" ]; then
-            echo "Adding libcurl dependency to $arch binary..."
-            python3 add_load_dylib.py ".theos/obj/$arch/iForward" /usr/lib/libcurl.dylib
-          fi
-        done
-        # Repackage with modified binaries
         make package FINALPACKAGE=1
       env:
         THEOS: ${{ env.THEOS }}
