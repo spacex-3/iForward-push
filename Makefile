@@ -41,4 +41,5 @@ internal-stage::
 after-install::
 	install.exec "mkdir -p /Library/Application\ Support/iForward"
 	install.exec "chmod 644 /Library/LaunchDaemons/com.iforward.plist"
+	install.exec "launchctl unload /Library/LaunchDaemons/com.iforward.plist 2>/dev/null || true"
 	install.exec "launchctl load /Library/LaunchDaemons/com.iforward.plist"

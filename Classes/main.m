@@ -1005,7 +1005,9 @@ int ExecIMessageCommand(int limit)
         //not yet determined try next run
         else if (flags==0)
         {
-            if (now2 < sysTime - 10)
+            // If message is older than 10 seconds, assume it's incoming
+            time_t sysTime = time(NULL);
+            if (now < sysTime - 10)
             {
                isIncoming = 1;
                strcpy(from_to, "from");
@@ -1159,7 +1161,6 @@ int ExecSMSCommand(const char *cmd, int limit)
           tim = *(localtime(&now));
           strftime(date,30,"%b %d, %Y  %I:%M:%S %p",&tim);
         }
-        time_t sysTime;
 
         flags = sqlite3_column_int(stmt, 3);
         char from_to[5];
@@ -1174,8 +1175,8 @@ int ExecSMSCommand(const char *cmd, int limit)
           strcpy(from_to, "from");
         }
         else if (strstr(flags_str, "3") == flags_str)
-        { 
-          strcpy(from_to, "to"); 
+        {
+          strcpy(from_to, "to");
         }
         else if (strstr(flags_str, "1") == flags_str)
         {
@@ -1184,7 +1185,7 @@ int ExecSMSCommand(const char *cmd, int limit)
         //not yet determined try next run
         else if (flags == 0)
         {
-            sysTime = time(NULL);
+            time_t sysTime = time(NULL);
             if (now < sysTime - 10)
             {
                isIncoming = 1;
