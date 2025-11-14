@@ -973,27 +973,20 @@ int ExecIMessageCommand(int limit)
             
     
         address = sqlite3_column_text(stmt, 1);
-        
+
         number = sqlite3_column_int(stmt, 2);
         struct tm tim;
-        time_t now,now2,sysTime;
-        sysTime = time(NULL);
-        now = (time_t) number;
-        if (now > 0) 
+        time_t now;
+        // iOS uses Mac Absolute Time (seconds since 2001-01-01 00:00:00)
+        // Convert to Unix timestamp by adding reference date offset
+        const time_t MAC_EPOCH_OFFSET = 978307200;
+        now = (time_t) number + MAC_EPOCH_OFFSET;
+        if (now > 0)
         {
           tim = *(localtime(&now));
-          tim.tm_mday += 1;
-          tim.tm_year += 31;
-          now2 = mktime(&tim);
-          //user's timezone does not need +1
-          if (now2 > sysTime + 60 * 5)
-          {
-            tim.tm_mday -= 1;
-            now2 = mktime(&tim);
-          }
           strftime(date,30,"%b %d, %Y  %I:%M:%S %p",&tim);
         }
-  
+
         flags = sqlite3_column_int(stmt, 3);
         char from_to[5];
         char flags_str[15];
@@ -1303,24 +1296,17 @@ int ExecSMSCommand6(const char *cmd, int limit)
     {
       [nsData appendFormat: @"<br/>All Recipients:%@", allRec];
     }
-    
+
         number = sqlite3_column_int(stmt, 2);
         struct tm tim;
-        time_t now,now2,sysTime;
-        sysTime = time(NULL);
-        now = (time_t) number;
-        if (now > 0) 
+        time_t now;
+        // iOS uses Mac Absolute Time (seconds since 2001-01-01 00:00:00)
+        // Convert to Unix timestamp by adding reference date offset
+        const time_t MAC_EPOCH_OFFSET = 978307200;
+        now = (time_t) number + MAC_EPOCH_OFFSET;
+        if (now > 0)
         {
           tim = *(localtime(&now));
-          tim.tm_mday += 1;
-          tim.tm_year += 31;
-          now2 = mktime(&tim);
-          //user's timezone does not need +1
-          if (now2 > sysTime + 60 * 5)
-          {
-            tim.tm_mday -= 1;
-            now2 = mktime(&tim);
-          }
           strftime(date,30,"%b %d, %Y  %I:%M:%S %p",&tim);
         }
 
