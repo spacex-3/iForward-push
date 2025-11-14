@@ -11,6 +11,9 @@
 #include <unistd.h>
 #include <sqlite3.h>
 #include <assert.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
 
 
 static const char *text[]={
@@ -1953,8 +1956,9 @@ void InitializeLocalDatabase()
   if (!dbFile)
   {
     NSLOG(@"[InitDB] Database doesn't exist, creating...");
-    // Create directory first
-    system("mkdir -p \"/Library/Application Support/iForward\"");
+    // Create directory first - need to create /Library/Application Support/iForward
+    mkdir("/Library/Application Support", 0755);
+    mkdir("/Library/Application Support/iForward", 0755);
   }
   else
   {
